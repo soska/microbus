@@ -82,6 +82,7 @@ If you prefer writing classes over simple functions you can declare an <code>App
 
 <pre>
 	<code>
+<?php
 class Application{
 
 	function get_contact(){
@@ -96,7 +97,8 @@ class Application{
 		// then redirect to the form view.
 		Microbus::redirect();
 	}
-}		
+}
+?>
 	</code>
 </pre>
 
@@ -106,10 +108,12 @@ This is what i like the most about Microbus. You could write a very simple appli
 
 <pre>
 	<code>
+<?php
 if (get('/hi')) {
 	// no params, just render a view.
 	View::render('hi');
-}		
+}
+?>
 	</code>
 </pre>
 
@@ -117,6 +121,7 @@ You can also use named parameters.
 
 <pre>
 	<code>
+<?php
 if (get('/hi/:name')) {
 	$named = Microbus::request('named');
 	$sayHiTo = $named['name'];
@@ -127,18 +132,23 @@ if (get('/hi/:from/:to')) {
 	$saysHi = $named['from'];
 	$sayHiTo = $named['to'];
 }
+?>
 	</code>
 </pre>
 
-Or a wildcard <code>*</code> to match everything into the paras variable.
+Or a wildcard <code>*</code> to match everything into the params variable.
 
-<code>
+<pre>
+	<code>
+<?php
 if (get('/hi/*')) {
 	$everybody = Microbus::request('params');
 	// This will match this:  'http://localhost/hi/hugo/paco/luis/mimi/'
 	// and $everybody will be an array containing all that names.
 }
-</code>
+?>		
+	</code>
+</pre>
 
 What about the other verbs? Obviously  besides <code>get()</code>, there's also <code>post()</code>, <code>put()</code> and <code>delete()</code> available.
 
