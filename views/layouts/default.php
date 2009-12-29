@@ -13,7 +13,7 @@
 			<h1><?php echo $pageTitle ?></h1>
 		</div>
 		<div id="content">
-			<?php View::output() ?>					
+			<?php View::yield() ?>					
 		</div>
 	</div>	
 </body>

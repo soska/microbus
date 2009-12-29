@@ -49,6 +49,10 @@ class View{
 	}
 	
 	function renderLayout($layout = 'default'){
+		
+		if (function_exists('Layout')) {
+			return Layout();
+		}
 
 		$layout = LAYOUTS_PATH.$layout.".php";
 
@@ -61,15 +65,23 @@ class View{
 		return false;
 	}
 	
-	function setContent($content = ''){
-		self::$_content = $content;
+	function setContent($content = '', $append = false){
+		if ($append) {
+			self::$_content .= $content;			
+		}else{
+			self::$_content = $content;			
+		}
 	}
 	
 	function content(){
 		return self::$_content;
 	}
 	
-	function output(){
+	function output($string){
+		self::setContent($string,true);
+	}
+	
+	function yield(){
 		echo self::content();
 	}
 	
@@ -77,8 +89,15 @@ class View{
 		return file_exists($view);
 	}
 	
-	function set($key,$value){
-		self::$vars[$key] = $value;
+	function set($key,$value = null){
+		if (is_array($key)) {
+			foreach ($key as $k => $v) {
+				self::$vars[$k] = $v;				
+			}
+		}else{
+			self::$vars[$key] = $value;			
+		}
+		
 	}
 	
 	function get($key){
@@ -130,6 +149,19 @@ class Microbus{
 	static function ride($app = null){
 		self::setApp($app);
 		self::dispatch();
+	}
+	
+	static function redirect($url = null){
+		if (!$url) {
+			$url = self::request('path');
+		}
+		
+		if ($url == '/') {
+			$url = 'index';
+		}
+		
+		header('Location:'.$url);
+		exit;
 	}
 	
 	/**
@@ -287,22 +319,18 @@ class Microbus{
 		$params = self::request('params');
 		
 		if (is_object(self::$app) && method_exists(self::$app,$method)) {
-			View::start();			
 			call_user_func(array(self::$app,$method),$params);
-			View::end();						
 			return;
 		}
 		
 		if (function_exists($method)) {
-			View::start();
 			call_user_func_array($method,$params);
-			View::end();			
 			return;
 		}
-		
-		
+				
 		if (!View::render(self::request('action'))){
-			echo '404';
+			// self::notFound();
+			// we are missing some 404 code here.
 		}
 
 		
@@ -355,9 +383,7 @@ class Microbus{
 		if ($match && is_callable($callback)) {
 
 			self::$routed[] = $route;
-			View::start();			
 			call_user_func_array($callback,self::request('params'));
-			View::end();			
 			return true;
 		}		
 		

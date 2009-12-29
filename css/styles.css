@@ -1,9 +1,21 @@
 body{
-	color:#ff9;
-	background:#900;
+	color:#666;
+	background:#eee;
+	font-family:'helvetica neue', helvetica, "lucida grande", arial, sans-serif;
+	font-size:90%;
+	line-height:1.5em;
 }
 
 #container{
 	width:600px;
 	margin:0 auto;
+}
+
+label{
+	display:block;
+}
+
+input{
+	display:block;
+	margin:.5em;
 }

@@ -1,0 +1,196 @@
+h1. Microbus
+
+h2. Completely original nano-framework for PHP (ok, a bit inspired by sinatra.rb)
+
+Microbus is a tiny framework for creating PHP applications very easily. Altough it's a bit inspired by "sinatra.rb"http://sinatrarb.com it does not try to mimic ruby's programming style. _Au contraire_, Microbus is very PHP-ish (I'll let you decide if that is a good thing or not) you decide if you want to use functional programming or OOP or a combination of both.
+
+Microbus asumes nothing and imposes nothing. Just drop this download somewhere in your webroot and you are ready to go.
+
+*Note: For this examples, I'll asume that you installed it in _http://localhost/microbus_
+
+
+h3. Über-Simple Usage:
+
+If you only need a pseudo-static site that consists only of some pages, you can just use views, with no logic at all. Fore example, just add this to <code>application.php</code>:
+
+<pre><code>
+<?php 
+include('libe/microbus.php');
+Microbus::ride();
+?>	
+</code></pre>
+
+Then add a file named <code>hello.php</code> in the <code>views</code> folder with a code like this:
+
+<pre><code>
+	
+<h1>Hello World</h1>
+
+</code></pre>
+
+Then go to http://localhost/microbus/hello in your browser and you'll get your page. If you view the HTML source code, you'll notice that the template output was inserted on a layout. That layout is in <code>views/layouts/default.php</code>
+
+That's it. If you don't need fancy stuff like orm processing, routes, filters or logic, this is all you need to do.
+
+
+
+h3. Simple Route Functions:
+
+<code>Microbus::ride()</code> detect's the path and the HTTP method by which the user has come and redirects them to a function that is declared in this form: <code>[httpverb]_[path]()</code>.
+
+For example: Let's say you need a basic contact form, in which case you'll need to divide the task in to steps. First, present the form and second, process the form data.
+
+Add this to <code>application.php</code>
+
+<pre><code>
+<?php
+include('libe/microbus.php');
+
+function get_contact(){
+	View::render('contact');
+}
+
+function post_contact(){
+	
+	// Retrieve the form's submitted data 
+	$data = Microbus::request('data');
+	
+	// do something with the form data here.
+	// ...
+	// then redirect to the form view.
+	Microbus::redirect();
+}
+
+Microbus::ride();
+
+?>			
+</code></pre>
+
+The contact view, is a simple HTML form which sent its data via a POST method.
+
+<pre><code>
+	<form method="post">
+		<label for="contact[email]">Your E-mail</label>
+		<input type="text" name="contact[email]" value="">
+		<label for="contact[email]">Your comment</label>
+		<textarea name="contact[email]" value="" id="email" rows="8"></textarea>
+		<input type="submit" value="Contact" >
+	</form>		
+</code></pre>
+
+If you prefer writing classes over simple functions you can declare an <code>Application</code> class and use method instead of functions.
+
+<pre>
+	<code>
+class Application{
+
+	function get_contact(){
+		View::render('contact');
+	}
+
+	function post_contact(){
+		$data = Microbus::request('data');
+
+		// do something with the form data here.
+
+		// then redirect to the form view.
+		Microbus::redirect();
+	}
+}		
+	</code>
+</pre>
+
+h3. Conditional routing
+
+This is what i like the most about Microbus. You could write a very simple application just as a series of <code>if</code> statements, like this.
+
+<pre>
+	<code>
+if (get('/hi')) {
+	// no params, just render a view.
+	View::render('hi');
+}		
+	</code>
+</pre>
+
+You can also use named parameters.
+
+<pre>
+	<code>
+if (get('/hi/:name')) {
+	$named = Microbus::request('named');
+	$sayHiTo = $named['name'];
+}
+
+if (get('/hi/:from/:to')) {
+	$named = Microbus::request('named');
+	$saysHi = $named['from'];
+	$sayHiTo = $named['to'];
+}
+	</code>
+</pre>
+
+Or a wildcard <code>*</code> to match everything into the paras variable.
+
+<code>
+if (get('/hi/*')) {
+	$everybody = Microbus::request('params');
+	// This will match this:  'http://localhost/hi/hugo/paco/luis/mimi/'
+	// and $everybody will be an array containing all that names.
+}
+</code>
+
+What about the other verbs? Obviously  besides <code>get()</code>, there's also <code>post()</code>, <code>put()</code> and <code>delete()</code> available.
+
+
+h3. Callback Routing
+
+If your app starts getting bigger, maybe you don't like having dozens of conditional statements all over the place. That's cool, <code>get()</code>, <code>post()</code> etc, accept a callback as the second parameter so you can separate your routing from your functions.
+
+<pre>
+	<code>
+
+// the route declaration
+get('hi/*','greetings');
+
+// the callback function
+function greetings($from, $to){
+	
+	// the url params get passed to the function, of course you can still use
+	// Microbus::request('params'); and Microbus::request('named'); if you prefer it.
+
+	// btw, you can set the page title like this:
+	View::set('pageTitle','Greetings from '.$from);
+
+	// and pass variables to the view like this:
+	View::set(compact('from','to'));
+	
+	View::render('greetings');	
+}
+		
+	</code>
+</pre>
+
+Isn't that nice? But it can look better if you're using PHP 5.3's lambda functions.
+
+<pre>
+	<code>
+<?php
+get('hi/*',function($from,$to){
+	View::set('pageTitle','Greetings from '.$from);
+	View::set(compact('from','to'));
+	View::render('greetings');		
+});
+?>		
+	</code>
+</pre>
+
+Awww.
+
+h3. That's pretty much it. 
+
+There are some nice stuff behind the scenes and I'm working on adding the ability to make Microbus plugins, but there's no model or database abstraction layer and all that stuff. You'll have to add it yourself.
+
+I know that this seems like no more that a glorified router, but that's the beauty of Microbus. Sometimes  big frameworks like CakePHP or Symfony are overkill for small applications. Or maybe you don't really like that convention over configuration stuff and prefer to do things either your way or the highway.
+
+Microbus _is_ the highway.
