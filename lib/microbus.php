@@ -1,10 +1,12 @@
 <?php
 
-if (!defined('VIEWS_PATH')) {
-	define('VIEWS_PATH',dirname(dirname(__FILE__)).DIRECTORY_SEPARATOR."views".DIRECTORY_SEPARATOR);
-	define('LAYOUTS_PATH',VIEWS_PATH."layouts".DIRECTORY_SEPARATOR);
-	
-}
+if (!defined('DS')) define('DS',DIRECTORY_SEPARATOR);
+if (!defined('ROOT_PATH')) define('ROOT_PATH',dirname(dirname(__FILE__)).DS);
+if (!defined('VIEWS_PATH')) define('VIEWS_PATH',ROOT_PATH."views".DS);
+if (!defined('LAYOUTS_PATH')) define('LAYOUTS_PATH',VIEWS_PATH."layouts".DS);	
+if (!defined('TMP_PATH')) define('TMP_PATH',ROOT_PATH."tmp".DS);	
+
+
 
 /**
  * View
@@ -15,6 +17,8 @@ if (!defined('VIEWS_PATH')) {
 class View{
 
 	static private $_content;
+	static private $_layout = 'default';
+	
 	static $vars = array(
 			'pageTitle' => 'Microbus',
 		);
@@ -37,21 +41,26 @@ class View{
 	}
 	
 	static function end($withLayout = true){
-
-		self::setContent(ob_get_contents());
+		$content = ob_get_contents();
+		$content = Pimp::filter('filter_view',$content);
+		self::setContent($content);
 		ob_end_clean();	
 
 		if ($withLayout) {
-			return self::renderlayout();						
+			return self::renderLayout();						
 		}
 		
 		return self::content();
 	}
 	
-	function renderLayout($layout = 'default'){
+	function renderLayout($layout = null){
 		
 		if (function_exists('Layout')) {
 			return Layout();
+		}
+		
+		if(!$layout){
+			$layout = self::$_layout;
 		}
 
 		$layout = LAYOUTS_PATH.$layout.".php";
@@ -64,6 +73,10 @@ class View{
 		
 		return false;
 	}
+	
+	function setLayout($layout = ''){
+		self::$_layout = $layout;
+	}	
 	
 	function setContent($content = '', $append = false){
 		if ($append) {
@@ -185,9 +198,17 @@ class Microbus{
 	 * @return void
 	 * @author Armando Sosa
 	 */
-	static function setRequest($request){
+	static function setRequest($key,$value = false){
+		
+		if (is_array($key)) {
+			$request = $key;
+		}else{
+			$request = array($key=>$value);
+		}
+		
 		if (empty(self::$request)) {
 			self::$request = array(
+					'subdomain'=>false,
 					'route'=>'',
 					'verb'=>'get',
 					'path'=>'/',
@@ -230,6 +251,33 @@ class Microbus{
 		return array($verb,$path);
 	}
 	
+	/**
+	 * If we are on a subdmain, we'll get it.
+	 *
+	 * @return void
+	 * @author Armando Sosa
+	 */
+	function resolveSubdomain($domain,$callback = false){
+		
+		$subdomain = false;
+		
+		$host = $_SERVER['HTTP_HOST'];
+		$sub = str_replace($domain,'',$host);
+		$parts = explode('.',$sub);
+		
+		if (is_array($parts) && !empty($parts[0])) {
+			$subdomain = $parts[0];
+		}
+		
+		self::setRequest('subdomain',$subdomain);
+		
+		if (is_callable($callback)) {
+			return call_user_func($callback,$subdomain);
+		}
+		
+		return $subdomain;
+		
+	}
 	
 	/**
 	 * This method is used to dispatch automagic verb+function/method/view
@@ -313,10 +361,14 @@ class Microbus{
 	 * @return void
 	 * @author Armando Sosa
 	 */
-	static function call(){
+	static function call($method = null, $params = null, $recursion = false){
 		
-		$method = self::request('method');
-		$params = self::request('params');
+		if (!$method) {
+			$method = self::request('method');
+		}
+		if (!$params) {
+			$params = self::request('params');			
+		}
 		
 		if (is_object(self::$app) && method_exists(self::$app,$method)) {
 			call_user_func(array(self::$app,$method),$params);
@@ -329,8 +381,12 @@ class Microbus{
 		}
 				
 		if (!View::render(self::request('action'))){
-			// self::notFound();
-			// we are missing some 404 code here.
+			if (!$recursion) {
+				self::call('not_found',array(),true);
+			}else{
+				header("HTTP/1.0 404 Not Found");				
+				die('Error 404');
+			}
 		}
 
 		
@@ -473,6 +529,55 @@ class Microbus{
 }
 
 /**
+ * Pimp, plugin interface
+ *
+ * @package default
+ * @author Armando Sosa
+ */
+class Pimp{
+	
+	static private $hooks = array();
+	
+	function hook($when,$do){
+		if (is_callable($do)) {
+			if (! isset(self::$hooks[$when])) {
+				self::$hooks[$when] = array();
+			}
+			self::$hooks[$when][] = $do;
+		}
+	}
+	
+	function call(){
+		$args = func_get_args();
+		$when = array_shift($args);
+		
+		if (isset(self::$hooks[$when])) {
+			foreach (self::$hooks as $hook) {
+				if (is_callable($hook)) {
+					call_user_func_array($hook,$args);
+				}					
+			}
+		}
+		
+	}
+	
+	function filter($when, $string){
+		if (isset(self::$hooks[$when])) {
+			foreach (self::$hooks[$when] as $hook) {
+				if (is_callable($hook)) {
+					$string = call_user_func($hook,$string);
+				}					
+			}
+		}
+		
+		return $string;
+		
+	}	
+	
+}
+
+
+/**
  * Application Class
  *
  * @package default
@@ -480,7 +585,6 @@ class Microbus{
  */
 if (!class_exists('Application')) {
 	class Application{
-		
 	}
 }
 
@@ -489,35 +593,118 @@ if (!class_exists('Application')) {
 	Functions
 */
 
+
+/**
+ * get
+ *
+ * @param string $route 
+ * @param string $callback 
+ * @return void
+ * @author Armando Sosa
+ */
 function get($route, $callback = null){
 	return Microbus::route('get',$route,$callback);
 }
 
+/**
+ * post
+ *
+ * @param string $route 
+ * @param string $callback 
+ * @return void
+ * @author Armando Sosa
+ */
 function post($route, $callback = null){
 	return Microbus::route('post',$route,$callback);
 }
 
+/**
+ * put
+ *
+ * @param string $route 
+ * @param string $callback 
+ * @return void
+ * @author Armando Sosa
+ */
 function put($route, $callback = null){
 	return Microbus::route('put',$route,$callback);
 }
 
+/**
+ * delete
+ *
+ * @param string $route 
+ * @param string $callback 
+ * @return void
+ * @author Armando Sosa
+ */
 function delete($route, $callback = null){
 	return Microbus::route('delete',$route,$callback);
 }
 
+/**
+ * Resolves a subdomain
+ *
+ * @param string $domain 
+ * @param string $callback 
+ * @return void
+ * @author Armando Sosa
+ */
+function subdomain_of($domain, $callback = false){
+	return Microbus::resolveSubdomain($domain,$callback);
+}
 
+
+
+if (!function_exists('not_found')) {
+	/**
+	 * not_found
+	 *
+	 * @return void
+	 * @author Armando Sosa
+	 */
+	function not_found(){
+		header("HTTP/1.0 404 Not Found");
+		View::output('<h2>Sorry, there\'s nothing here</h2>');
+		View::set('pageTitle','404 not found');
+		View::renderLayout();
+	}
+}
+
+
+/**
+ * str_contains - return true if $str contains substring $pattern
+ *
+ * @param string $pattern 
+ * @param string $str 
+ * @return void
+ * @author Armando Sosa
+ */
 function str_contains($pattern,$str){
 	$p = strpos($str,$pattern);
 	return ($p !== false);
 }
 
+/**
+ * str_starts_with - returns tru if $pattern is contained at the beggining of $str
+ *
+ * @param string $pattern 
+ * @param string $str 
+ * @return void
+ * @author Armando Sosa
+ */
 function str_starts_with($pattern,$str){
 	$p = strpos($str,$pattern);
 	return ($p === 0);
 }
 
-
-
+/**
+ * pr - utility function for debuggin purposes
+ *
+ * @param string $var 
+ * @return void
+ * @author Armando Sosa
+ */
 function pr($var){
 	echo "<pre>";
 	print_r($var);
