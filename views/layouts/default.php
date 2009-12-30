@@ -1,3 +1,4 @@
+<?php Session::start() ?>
 <!DOCTYPE HTML>
 <html lang="ru-RU">
 <head>
@@ -12,6 +13,11 @@
 		<div id="header">
 			<h1><?php echo $pageTitle ?></h1>
 		</div>
+		<?php if ($flash = flash()): ?>
+			<div id="flash">
+				<?php echo $flash ?>
+			</div>			
+		<?php endif ?>
 		<div id="content">
 			<?php View::yield() ?>					
 		</div>

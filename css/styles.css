@@ -11,6 +11,12 @@ body{
 	margin:0 auto;
 }
 
+#flash{
+	color:#766;
+	background:#ee6;
+	padding:0 10px;
+}
+
 label{
 	display:block;
 }

@@ -7,7 +7,6 @@ if (!defined('LAYOUTS_PATH')) define('LAYOUTS_PATH',VIEWS_PATH."layouts".DS);
 if (!defined('TMP_PATH')) define('TMP_PATH',ROOT_PATH."tmp".DS);	
 
 
-
 /**
  * View
  *
@@ -165,13 +164,23 @@ class Microbus{
 	}
 	
 	static function redirect($url = null){
+		
 		if (!$url) {
 			$url = self::request('path');
 		}
-		
-		if ($url == '/') {
-			$url = 'index';
+
+		if (!str_starts_with('http://',$url)) {
+
+			if ($url == '/') {
+				$url = self::request('baseUrl');
+			}elseif (str_starts_with('/',$url)) {
+				$url = self::request('baseUrl').substr($url,1);				
+			}else{
+				$url = self::request('baseUrl').self::request('action').'/'.$url;				
+			}
+			
 		}
+		
 		
 		header('Location:'.$url);
 		exit;
@@ -280,6 +289,30 @@ class Microbus{
 	}
 	
 	/**
+	 * Sets a base URL, not sure that this works in every case.
+	 *
+	 * @param string $base 
+	 * @return void
+	 * @author Armando Sosa
+	 */
+	function setBaseUrl($base = null){
+
+		if ($base) {
+			str_replace('http://','',$base);
+		}else{
+			$request = self::request();
+
+			$base = $_SERVER['SERVER_NAME'].$_SERVER['REQUEST_URI'];
+			$base = str_replace($request['path'],'',$base);
+			if (!empty($request['subdomain'])) {
+				$base = $request['subdomain'].".".$base;
+			}			
+		}
+		
+		self::setRequest('baseUrl',"http://".$base);
+	}
+	
+	/**
 	 * This method is used to dispatch automagic verb+function/method/view
 	 *
 	 * @return void
@@ -316,6 +349,7 @@ class Microbus{
 		
 		self::setRequest(compact('verb','path','action','params','data','method'));
 
+		self::setBaseUrl();
 		self::call();
 	}
 	
@@ -528,6 +562,62 @@ class Microbus{
 	}
 }
 
+
+/**
+ * Session Class
+ *
+ * @package default
+ * @author Armando Sosa
+ */
+
+class Session{
+	
+	static private $started = false;
+	
+	function start(){
+		if (!self::$started) {
+			session_start();
+			self::$started = true;
+		}
+	}
+	
+	function set($key ='microbus', $value = 0){
+		self::start();
+		$value = serialize($value);
+		$_SESSION[$key] = $value;
+		return $_SESSION[$key];
+	}
+	
+	function push($key, $value){
+		self::start();		
+		$array = self::get($key);
+		if (!is_array($array)) {
+			return false;
+		}
+		$array[] = $value;
+		return self::set($key,$array);		
+	}
+	
+	function get($key){
+		self::start();		
+		if (!isset($_SESSION[$key])) {
+			return false;
+		}else{
+			return unserialize($_SESSION[$key]);
+		}		
+	}
+	
+	function delete($key){
+		self::start();	
+		if (!isset($_SESSION[$key])) {
+			return false;
+		}else{
+			unset($_SESSION[$key]);
+		}				
+	}
+	
+}
+
 /**
  * Pimp, plugin interface
  *
@@ -668,6 +758,16 @@ if (!function_exists('not_found')) {
 		View::output('<h2>Sorry, there\'s nothing here</h2>');
 		View::set('pageTitle','404 not found');
 		View::renderLayout();
+	}
+}
+
+function flash($msg = null){
+	if (empty($msg)) {
+		$msg =  Session::get('flash');
+		Session::delete('flash');			
+		return $msg;
+	}else{
+		Session::set('flash',$msg);			
 	}
 }
 
