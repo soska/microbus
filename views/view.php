@@ -1,1 +1,0 @@
-<h1>I'm a beautifull view</h1>

@@ -1,0 +1,77 @@
+#!/usr/bin/php -q 
+<?php
+
+$ds = DIRECTORY_SEPARATOR;
+
+$rideDir =  dirname(__FILE__);
+$root =  dirname($rideDir);
+
+if ($argc < 3) {
+	out("usage: ride [app_name] [path]");
+	exit;
+}
+
+list($script, $name, $path) = $argv;
+
+if (!is_dir($path)) {
+	$mkdir = mkdir($path);
+	if (!$mkdir) {
+		out('Cannot create  '.$path);
+		exit;
+	}
+}
+
+$files = array(
+		'.htaccess',
+		'index.php',
+		'lib/microbus.php',
+		'lib/microbus.php',
+		'css/microbus.png',
+		'css/styles.css',
+		'views/layouts/default.php',
+	);
+	
+foreach ($files as $file) {
+	$old = $root.$ds.$file;
+	$new = $path.$ds.$file;
+	$newDir = dirname($new);
+	if (!is_dir($newDir)) {
+		mkdir($newDir,0755,true);
+	}
+	if (!copy($old,$new)){
+		out("Error copying file: $old to $new");
+		exit;
+	}
+}
+
+$templates = array(
+		'application.php'=>'application.php',
+		'index.php'=>'views/index.php',
+	);
+	
+foreach ($templates as $template => $dest) {
+	$template = $rideDir.'/ride_tpl/'.$template;
+	$dest = $path.$ds.$dest;
+	if (file_exists($template)) {
+		$content = file_get_contents($template);
+		$content = str_replace('%name%',$name,$content);		
+		file_put_contents($dest,$content);			
+	}else{
+		out("Error writting file: $dest");		
+		exit;
+	}
+}	
+
+
+function out($str = "\n----"){
+	echo $str;
+	echo "\n";
+}
+
+function pr($var){
+	echo "\n -- \n";
+	print_r($var);
+	echo "\n -- \n";
+}
+
+?>

@@ -21,6 +21,9 @@
 		<div id="content">
 			<?php View::yield() ?>					
 		</div>
+		<div id="footer">
+			Powered By Microbus
+		</div>
 	</div>	
 </body>
 </html>
