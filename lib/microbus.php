@@ -17,23 +17,43 @@ class View{
 
 	static private $_content;
 	static private $_layout = 'default';
+	static private $_extension = "php";
+	static public $current = "";
 	
 	static $vars = array(
 			'pageTitle' => 'Microbus',
 		);
 
-	static function render($view = ''){
-		$view = VIEWS_PATH.$view.".php";			
+	static function render($view = '',$withLayout = true){
+		self::$current = $view;
+		$view = VIEWS_PATH.$view.".".self::$_extension;			
 
 		if (self::exists($view)) {
 			self::start();
-			extract(View::$vars);
-			include	$view;
-			return self::end();
+			if (Pimp::ed('include_view')) {
+				Pimp::call('include_view',$view,View::$vars);
+			}else{
+				extract(View::$vars);							
+				include	$view;				
+			}
+			return self::end($withLayout);
 		}
 		
 		return false;
 	}
+	
+	static function element($view = '',$withLayout = true){
+		self::$current = $view;
+		$view = VIEWS_PATH.$view.".".self::$_extension;			
+
+		if (self::exists($view)) {
+				extract(View::$vars);							
+				include	$view;				
+		}
+		
+		return false;
+	}
+
 	
 	static function start(){
 		ob_start();		
@@ -41,7 +61,7 @@ class View{
 	
 	static function end($withLayout = true){
 		$content = ob_get_contents();
-		$content = Pimp::filter('filter_view',$content);
+		$content = Pimp::filter('filter_content',$content);
 		self::setContent($content);
 		ob_end_clean();	
 
@@ -62,7 +82,8 @@ class View{
 			$layout = self::$_layout;
 		}
 
-		$layout = LAYOUTS_PATH.$layout.".php";
+		$layout = LAYOUTS_PATH.$layout.".".self::$_extension;
+
 
 		if (self::exists($layout)) {
 			extract(View::$vars);			
@@ -75,6 +96,12 @@ class View{
 	
 	function setLayout($layout = ''){
 		self::$_layout = $layout;
+	}	
+
+	function setFileExtension($ext = false){
+		if ($ext) {
+			self::$_extension = $ext;			
+		}
 	}	
 	
 	function setContent($content = '', $append = false){
@@ -152,6 +179,12 @@ class Microbus{
 	static public $routed = array();
 	
 	/**
+	 * route Prefix
+	 *
+	 * @var string
+	 */
+	static public $routePrefix = '';
+	/**
 	 * undocumented function
 	 *
 	 * @param string $app 
@@ -163,6 +196,13 @@ class Microbus{
 		self::dispatch();
 	}
 	
+	/**
+	 * redirects to a certain url
+	 *
+	 * @param string $url 
+	 * @return void
+	 * @author Armando Sosa
+	 */
 	static function redirect($url = null){
 		
 		if (!$url) {
@@ -194,7 +234,7 @@ class Microbus{
 	 * @author Armando Sosa
 	 */
 	static function setApp($app = null){
-		if (!$app) {
+		if (!$app && class_exists('Application')) {
 			$app = new Application;
 		}
 		self::$app = $app;	
@@ -427,6 +467,10 @@ class Microbus{
 	}
 	
 	
+	function setRoutePrefix($prefix = ''){
+		self::$routePrefix = $prefix;
+	}
+	
 	/**
 	 * undocumented function
 	 *
@@ -438,6 +482,8 @@ class Microbus{
 	 */
 	static function route($routeVerb,$route,$callback = null){
 		
+		self::setApp();
+		
 		// we'll just route the first time.
 		if (in_array($route,self::$routed)) {
 			return false;
@@ -445,6 +491,7 @@ class Microbus{
 		
 		list($verb,$path) = self::resolveRequest();	
 
+		// not the actual http method
 		if ($routeVerb != $verb) {
 			return false;
 		}
@@ -469,15 +516,22 @@ class Microbus{
 		}
 		
 		self::setRequest(array('data'=>self::getData($verb)));	
-				
-		if ($match && is_callable($callback)) {
 
+		if (is_callable(array(self::$app,$callback))) {
+			$callback = array(self::$app,$callback);
+		}
+						
+		if ($match && is_callable($callback)) {
 			self::$routed[] = $route;
 			call_user_func_array($callback,self::request('params'));
 			return true;
 		}		
 		
 		return $match;
+	}
+	
+	function pass(){
+		array_pop(self::$routed);
 	}
 	
 	/**
@@ -489,6 +543,9 @@ class Microbus{
 	 * @author Armando Sosa
 	 */
 	static function routeMatch($route,$path){
+		
+		// the route minus the prefix
+		$path = str_replace(self::$routePrefix,'',$path);
 		
 		if ($route == $path) {
 			self::setRequest(array('route'=>$path));
@@ -576,7 +633,7 @@ class Session{
 	
 	function start(){
 		if (!self::$started) {
-			session_start();
+			@session_start();
 			self::$started = true;
 		}
 	}
@@ -633,14 +690,17 @@ class Pimp{
 			if (! isset(self::$hooks[$when])) {
 				self::$hooks[$when] = array();
 			}
-			self::$hooks[$when][] = $do;
+			self::$hooks[$when] = $do;
 		}
+	}
+	
+	function ed($when){
+		return (isset(self::$hooks[$when]));
 	}
 	
 	function call(){
 		$args = func_get_args();
 		$when = array_shift($args);
-		
 		if (isset(self::$hooks[$when])) {
 			foreach (self::$hooks as $hook) {
 				if (is_callable($hook)) {
@@ -665,19 +725,6 @@ class Pimp{
 	}	
 	
 }
-
-
-/**
- * Application Class
- *
- * @package default
- * @author Armando Sosa
- */
-if (!class_exists('Application')) {
-	class Application{
-	}
-}
-
 
 /*
 	Functions
