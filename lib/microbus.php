@@ -377,7 +377,7 @@ class Microbus{
 		if ($path != '/') {
 			$path = preg_replace('/^\/|\/$/','',$path);
 			$params = explode('/',$path);
-			$action = array_shift(&$params);
+			$action = array_shift($params);
 		}else{
 			$params = array();
 			$action = 'index';
