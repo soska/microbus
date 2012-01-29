@@ -16,14 +16,14 @@
 		<?php if ($flash = flash()): ?>
 			<div id="flash">
 				<?php echo $flash ?>
-			</div>			
+			</div>
 		<?php endif ?>
 		<div id="content">
-			<?php View::yield() ?>					
+			<?php View::yield() ?>
 		</div>
 		<div id="footer">
 			Powered By Microbus
 		</div>
-	</div>	
+	</div>
 </body>
 </html>
