@@ -14,16 +14,16 @@ h3. Über-Simple Usage:
 If you only need a pseudo-static site that consists only of some pages, you can just use views, with no logic at all. Fore example, just add this to <code>application.php</code>:
 
 <pre><code>
-<?php 
+<?php
 include('lib/microbus.php');
 Microbus::ride();
-?>	
+?>
 </code></pre>
 
 Then add a file named <code>hello.php</code> in the <code>views</code> folder with a code like this:
 
 <pre><code>
-	
+
 <h1>Hello World</h1>
 
 </code></pre>
@@ -51,10 +51,10 @@ function get_contact(){
 }
 
 function post_contact(){
-	
-	// Retrieve the form's submitted data 
+
+	// Retrieve the form's submitted data
 	$data = Microbus::request('data');
-	
+
 	// do something with the form data here.
 	// ...
 	// then redirect to the form view.
@@ -63,7 +63,7 @@ function post_contact(){
 
 Microbus::ride();
 
-?>			
+?>
 </code></pre>
 
 The contact view, is a simple HTML form which sent its data via a POST method.
@@ -75,7 +75,7 @@ The contact view, is a simple HTML form which sent its data via a POST method.
 		<label for="contact[email]">Your comment</label>
 		<textarea name="contact[email]" value="" id="email" rows="8"></textarea>
 		<input type="submit" value="Contact" >
-	</form>		
+	</form>
 </code></pre>
 
 If you prefer writing classes over simple functions you can declare an <code>Application</code> class and use method instead of functions.
@@ -146,7 +146,7 @@ if (get('/hi/*')) {
 	// This will match this:  'http://localhost/hi/hugo/paco/luis/mimi/'
 	// and $everybody will be an array containing all that names.
 }
-?>		
+?>
 	</code>
 </pre>
 
@@ -165,7 +165,7 @@ get('hi/*','greetings');
 
 // the callback function
 function greetings($from, $to){
-	
+
 	// the url params get passed to the function, of course you can still use
 	// Microbus::request('params'); and Microbus::request('named'); if you prefer it.
 
@@ -174,10 +174,10 @@ function greetings($from, $to){
 
 	// and pass variables to the view like this:
 	View::set(compact('from','to'));
-	
-	View::render('greetings');	
+
+	View::render('greetings');
 }
-		
+
 	</code>
 </pre>
 
@@ -189,15 +189,15 @@ Isn't that nice? But it can look better if you're using PHP 5.3's lambda functio
 get('hi/*',function($from,$to){
 	View::set('pageTitle','Greetings from '.$from);
 	View::set(compact('from','to'));
-	View::render('greetings');		
+	View::render('greetings');
 });
-?>		
+?>
 	</code>
 </pre>
 
 Awww.
 
-h3. That's pretty much it. 
+h3. That's pretty much it.
 
 There are some nice stuff behind the scenes and I'm working on adding the ability to make Microbus plugins, but there's no model or database abstraction layer and all that stuff. You'll have to add it yourself.
 
